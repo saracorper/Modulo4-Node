@@ -1,6 +1,31 @@
 'use strict';
 
+const bcrypt = require('bcrypt');
 const Joi = require('joi'); // sirve para validar datos de entrada, usar para logins
+const uuidV4 = require('uuid/v4');
+const mysql = require('mysql2/promise');
+
+/**
+ * TODO: Refactorizar
+ */
+// create the connection to database
+let connection = null;
+(async () => {
+  connection = await mysql.createConnection({
+    host: 'localhost',
+    user: 'root',
+    database: 'socialnetwork',
+    password: 'password',
+  });
+  // connection.query(
+  //   'SELECT 1 + 1',
+  //   function (err, results, fields) {
+  //     console.log(results);
+  //     console.log(fields);
+  //   }
+  // );
+})();
+
 
 async function validateSchema(payload) {
   /**
@@ -11,8 +36,12 @@ async function validateSchema(payload) {
    * fullName: String with 3 minimun characters and max 128
    */
   const schema = {
-    // email: rules.email,
-    // password: rules.password,
+    email: Joi.string()
+      .email({ minDomainAtoms: 2 })
+      .required(),
+    password: Joi.string()
+      .regex(/^[a-zA-Z0-9]{3,30}$/)
+      .required()
     // fullName: rules.fullName,
   };
 
@@ -30,29 +59,57 @@ async function create(req, res, next) {
     await validateSchema(accountData);
   } catch (e) {
     // Create validation error
+    return res.status(400).send(e);
   }
 
-  const {
-    email,
-    password,
-    fullName,
-  } = accountData;
+  const { email, password, fullName } = accountData;
 
   try {
     /**
      * TODO: Insert user into MySQL
      *  hash the password using bcrypt library
      */
-    const securePassword = 'TODO' /* USE BCRYPT TO CIPHER THE PASSWORD */;
+    /* USE BCRYPT TO CIPHER THE PASSWORD */
+    const securePassword = await bcrypt.hash(password, 10);
+    const uuid = uuidV4();
+    const now = new Date();
+    const createdAt = now.toISOString().substring(0, 19).replace('T', ' ');
+
+    console.log('secure password', securePassword, 'createdAt', createdAt);
+    console.log('uuid', uuid);
 
     /**
      * TODO: Insert user into mysql and get the user uuid
      */
 
+    try {
+      await connection.query('INSERT INTO users SET ?', {
+        uuid,
+        email,
+        password: securePassword,
+        created_at: createdAt,
+      });
+    } catch (e) {
+      console.error(e);
+      return res.status(409).send(e.message);
+    }
     /**
      * TODO: CREATE VERIFICATION CODE AND INSERT IT INTO MySQL
      */
-    const verificationCode = 'TODO: use uuid library to generate a uuid version 4';
+    const verificationCode = uuidV4();
+
+    try {
+      await connection.query('INSERT INTO users_activation SET ?', {
+        user_uuid: uuid,
+        verification_code: verificationCode,
+        created_at: createdAt,
+      });
+    } catch (e) {
+      console.error(e);
+      return res.status(409).send(e.message);
+    }
+
+    "TODO: use uuid library to generate a uuid version 4";
 
     /**
      * TODO: Tell user the account was created
@@ -65,7 +122,7 @@ async function create(req, res, next) {
        * Send email to the user adding the verificationCode in the link
        */
     } catch (e) {
-      console.error('Sengrid error', e);
+      console.error("Sengrid error", e);
     }
   } catch (e) {
     // create error
