@@ -30,7 +30,7 @@ async function connect() {
   } catch (e) {
     console.error('mysql pool connect', e);
     throw e;
-  
+  }
 }
 
 async function getConnection() {

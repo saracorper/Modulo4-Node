@@ -1,4 +1,4 @@
-use strict';
+'use strict';
 
 const mysqlPool = require('../../../databases/mysql-pool');
 
@@ -19,6 +19,7 @@ WHERE verification_code='${verificationCode}'
 AND verified_at IS NULL`;
 
   try {
+    debugger;
     const connection = await mysqlPool.getConnection();
     const result = await connection.query(sqlActivateQuery);
 

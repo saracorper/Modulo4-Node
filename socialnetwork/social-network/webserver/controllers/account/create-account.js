@@ -5,6 +5,7 @@ const Joi = require('joi');
 const sendgridMail = require('@sendgrid/mail');
 const uuidV4 = require('uuid/v4');
 const mysqlPool = require('../../../databases/mysql-pool');
+const UserModel = require('../../../models/user-model');
 
 sendgridMail.setApiKey(process.env.SENGRID_API_KEY);
 
@@ -56,6 +57,29 @@ async function addVerificationCode(uuid) {
   connection.release();
 
   return verificationCode;
+}
+
+async function createUserProfile(uuid) {
+
+  const userProfileData = {
+    uuid,
+    avatarUrl: null,
+    fullName: null,
+    preferences: {
+      isPubliProfile: false,
+      linkedIn: null,
+      twitter: null,
+      github: null,
+      description: null,
+    },
+  };
+
+  try {
+    const userCreated = await UserModel.create(userProfileData);
+    console.log(userCreated);
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 /**
@@ -124,6 +148,7 @@ async function create(req, res, next) {
     const uuid = await insertUserIntoDatabase(email, password);
     res.status(204).json();
 
+    await createUserProfile(uuid);
     /**
      * Generate verification code and send email
      */
