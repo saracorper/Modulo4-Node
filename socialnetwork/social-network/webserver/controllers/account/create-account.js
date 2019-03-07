@@ -60,13 +60,13 @@ async function addVerificationCode(uuid) {
 }
 
 async function createUserProfile(uuid) {
-
   const userProfileData = {
     uuid,
     avatarUrl: null,
     fullName: null,
+    friends: [],
     preferences: {
-      isPubliProfile: false,
+      isPublicProfile: false,
       linkedIn: null,
       twitter: null,
       github: null,
@@ -76,6 +76,7 @@ async function createUserProfile(uuid) {
 
   try {
     const userCreated = await UserModel.create(userProfileData);
+
     console.log(userCreated);
   } catch (e) {
     console.error(e);
@@ -148,7 +149,11 @@ async function create(req, res, next) {
     const uuid = await insertUserIntoDatabase(email, password);
     res.status(204).json();
 
+    /**
+     * We are going to creaate minimum structure in mongodb
+     */
     await createUserProfile(uuid);
+
     /**
      * Generate verification code and send email
      */
